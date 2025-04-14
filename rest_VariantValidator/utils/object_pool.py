@@ -1,3 +1,4 @@
+import contextlib
 import threading
 import logging
 import platform
@@ -11,6 +12,8 @@ import mysql.connector
 from VariantValidator import Validator, settings as vv_settings
 from VariantFormatter.simpleVariantFormatter import SimpleVariantFormatter
 
+class ObjectPoolTimeoutException(Exception):
+    pass
 
 # -----------------------------------------------------------------------------
 # Logger
@@ -167,47 +170,68 @@ def compute_pool_sizes():
 
 
 # =============================================================================
-# FIXED OBJECT POOL
+# OBJECT POOL (leak-safe: checkout via context manager)
 # =============================================================================
 
-class FixedObjectPool:
-    """Strict fixed-size blocking pool."""
-
-    def __init__(self, factory, size):
-        if size <= 0:
-            raise ValueError("Pool size must be > 0")
-
-        self._size = size
-        self._available = []
-        self._in_use = 0
-
-        self._lock = threading.Lock()
+class ObjectPool:
+    def __init__(self, factory, initial_pool_size=0, max_pool_size=10):
+        self.factory = factory
+        self.max_pool_size = max_pool_size
+        self._pool_size = initial_pool_size
+        self._available = [factory() for _ in range(initial_pool_size)]
+        self._pool_size = len(self._available)
+        self._lock = threading.RLock()
         self._condition = threading.Condition(self._lock)
 
-        for _ in range(size):
-            self._available.append(factory())
-
-    def available(self):
+    def __len__(self):
         with self._lock:
-            return len(self._available)
+            return self._pool_size
 
     def total(self):
-        return self._size
+        return self._pool_size
 
-    def get_object(self):
+    def ensure(self, min_size):
+        """Ensure that at least min_size items are available in the pool."""
+        if min_size > self.max_pool_size:
+            raise ValueError("min_size cannot be greater than max_pool_size")
         with self._condition:
-            while not self._available:
-                self._condition.wait()
-            self._in_use += 1
-            return self._available.pop()
+            if self._pool_size >= min_size:
+                return
+            need = min_size - self._pool_size
+            to_add = [self.factory() for _ in range(need)]
+            self._available.extend(to_add)
+            self._pool_size += len(to_add)
+            self._condition.notify(need)
 
-    def return_object(self, obj):
+    @contextlib.contextmanager
+    def item(self, timeout=None):
+        """Check out an item from the pool and ensure it is returned.
+
+        This must be used as a context manager for reliable cleanup:
+
+            with pool.item() as obj:
+                # use obj
+                pass
+        """
+
         with self._condition:
-            if self._in_use <= 0:
-                raise RuntimeError("Pool underflow detected")
-            self._in_use -= 1
-            self._available.append(obj)
-            self._condition.notify()
+            if len(self._available) > 0:
+                obj = self._available.pop()
+            elif self._pool_size < self.max_pool_size:
+                # Create a new object to add to the pool
+                obj = self.factory()
+                self._pool_size += 1
+            else:
+                if not self._condition.wait_for(lambda: len(self._available) > 0,
+                                                timeout=timeout):
+                    raise ObjectPoolTimeoutException("Timeout waiting for object from pool")
+                obj = self._available.pop()
+            try:
+                yield obj
+            finally:
+                # return the object to the pool
+                self._available.append(obj)
+                self._condition.notify()
 
 
 # =============================================================================
@@ -217,14 +241,11 @@ class FixedObjectPool:
 vval_size, vf_size, g2t_size = compute_pool_sizes()
 
 # Validator-only pools
-vval_object_pool = FixedObjectPool(Validator, vval_size)
-g2t_object_pool  = FixedObjectPool(Validator, g2t_size)
+vval_object_pool = ObjectPool(Validator, initial_pool_size=vval_size, max_pool_size=vval_size)
+g2t_object_pool = ObjectPool(Validator, initial_pool_size=g2t_size, max_pool_size=g2t_size)
 
 # Formatter pool (OBJECT MODE ONLY)
-vf_tool_object_pool = FixedObjectPool(SimpleVariantFormatter, vf_size)
-
-# Backwards-compatible alias expected by codebase
-simple_variant_formatter_pool = vf_tool_object_pool
+simple_variant_formatter_pool = ObjectPool(SimpleVariantFormatter, initial_pool_size=vf_size, max_pool_size=vf_size)
 
 
 # -----------------------------------------------------------------------------
