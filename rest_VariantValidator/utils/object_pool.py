@@ -1,70 +1,73 @@
+import contextlib
 import threading
 from VariantValidator import Validator
 from VariantFormatter import simpleVariantFormatter
 
+class ObjectPoolTimeoutException(Exception):
+    pass
 
 class ObjectPool:
-    def __init__(self, object_type, initial_pool_size=10, max_pool_size=10):
-        self.pool_size = initial_pool_size
+    def __init__(self, factory, initial_pool_size=0, max_pool_size=10):
+        self.factory = factory
         self.max_pool_size = max_pool_size
-        self.objects = [object_type() for _ in range(initial_pool_size)]
-        self.lock = threading.Lock()
-        self.condition = threading.Condition(self.lock)
+        self._pool_size = initial_pool_size
+        self._available = [factory() for _ in range(initial_pool_size)]
+        self._pool_size = len(self._available)
+        self._lock = threading.RLock()
+        self._condition = threading.Condition(self._lock)
 
-    def available(self):
-        """Number of free objects."""
-        with self.lock:
-            return len(self.objects)
+    def __len__(self):
+        with self._lock:
+            return self._pool_size
 
-    def total(self):
-        """Total configured capacity of pool."""
-        return self.pool_size
+    def ensure(self, min_size):
+        """Ensure that at least min_size items are available in the pool."""
+        if min_size > self.max_pool_size:
+            raise ValueError("min_size cannot be greater than max_pool_size")
+        with self._condition:
+            if self._pool_size >= min_size:
+                return
+            need = min_size - self._pool_size
+            to_add = [self.factory() for _ in range(need)]
+            self._available.extend(to_add)
+            self._pool_size += len(to_add)
+            self._condition.notify(need)
 
-    def get_object(self):
-        with self.condition:
-            while not self.objects:
-                self.condition.wait()
-            return self.objects.pop()
+    @contextlib.contextmanager
+    def item(self, timeout=None):
+        """Check out an item from the pool and ensure it is returned.
 
-    def return_object(self, obj):
-        with self.condition:
-            if len(self.objects) < self.max_pool_size:
-                self.objects.append(obj)
-                self.condition.notify()
+        This must be used as a context manager for reliable cleanup:
 
+            with pool.item() as obj:
+                # use obj
+                pass
+        """
 
-class SimpleVariantFormatterPool:
-    def __init__(self, initial_pool_size=10, max_pool_size=10):
-        self.pool_size = initial_pool_size
-        self.max_pool_size = max_pool_size
-        self.pool = [simpleVariantFormatter for _ in range(initial_pool_size)]
-        self.lock = threading.Lock()
-        self.condition = threading.Condition(self.lock)
-
-    def available(self):
-        with self.lock:
-            return len(self.pool)
-
-    def total(self):
-        return self.pool_size
-
-    def get(self):
-        with self.condition:
-            while not self.pool:
-                self.condition.wait()
-            return self.pool.pop()
-
-    def return_object(self, obj):
-        with self.condition:
-            if len(self.pool) < self.max_pool_size:
-                self.pool.append(obj)
-                self.condition.notify()
+        with self._condition:
+            if len(self._available) > 0:
+                obj = self._available.pop()
+            elif self._pool_size < self.max_pool_size:
+                # Create a new object to add to the pool
+                obj = self.factory()
+                self._pool_size += 1
+            else:
+                if not self._condition.wait_for(lambda: len(self._available) > 0,
+                                                timeout=timeout):
+                    raise ObjectPoolTimeoutException("Timeout waiting for object from pool")
+                obj = self._available.pop()
+            try:
+                yield obj
+            finally:
+                # return the object to the pool
+                self._available.append(obj)
+                self._condition.notify()
 
 
 # Create shared object pools
 vval_object_pool = ObjectPool(Validator, initial_pool_size=12, max_pool_size=12)
 g2t_object_pool = ObjectPool(Validator, initial_pool_size=6, max_pool_size=10)
-simple_variant_formatter_pool = SimpleVariantFormatterPool(initial_pool_size=12, max_pool_size=12)
+simple_variant_formatter_pool = ObjectPool(lambda: simpleVariantFormatter, initial_pool_size=8, max_pool_size=10)
 
 # <LICENSE>
 # Copyright (C) 2016-2026 VariantValidator Contributors

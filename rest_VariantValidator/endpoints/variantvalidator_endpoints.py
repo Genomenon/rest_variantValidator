@@ -65,44 +65,42 @@ class VariantValidatorClass(Resource):
     def get(self, genome_build, variant_description, select_transcripts, user_id=None):
 
         # Get object from vval pool
-        vval = vval_object_pool.get_object()
+        with vval_object_pool.item() as vval:
 
-        transcript_model = "refseq"
+            transcript_model = "refseq"
 
-        # Deprecated check for 'all' or 'raw' for genomic variants
-        if ("all" in select_transcripts or "raw" in select_transcripts) and "auth" not in select_transcripts:
-            if not any(x in variant_description for x in ("c.", "n.", "r.", "p.")):
-                return {"Not Found": "Setting select_transcripts to 'all' or 'raw' is deprecated for genomic "
-                                     "variant processing using this endpoint. Contact admin on "
-                                     "https://variantvalidator.org/help/contact/ for updated instructions and"
-                                     " fair usage information; use another option; or use the LOVD endpoint which is "
-                                     "designed for integration into pipelines"}, 404
-        elif "auth_all" in select_transcripts:
-            select_transcripts = "all"
-        elif "auth_raw" in select_transcripts:
-            select_transcripts = "raw"
+            # Deprecated check for 'all' or 'raw' for genomic variants
+            if ("all" in select_transcripts or "raw" in select_transcripts) and "auth" not in select_transcripts:
+                if not any(x in variant_description for x in ("c.", "n.", "r.", "p.")):
+                    return {"Not Found": "Setting select_transcripts to 'all' or 'raw' is deprecated for genomic "
+                                         "variant processing using this endpoint. Contact admin on "
+                                         "https://variantvalidator.org/help/contact/ for updated instructions and"
+                                         " fair usage information; use another option; or use the LOVD endpoint which is "
+                                         "designed for integration into pipelines"}, 404
+            elif "auth_all" in select_transcripts:
+                select_transcripts = "all"
+            elif "auth_raw" in select_transcripts:
+                select_transcripts = "raw"
 
-        variant_description = input_formatting.format_input(variant_description)
-        select_transcripts = input_formatting.format_input(select_transcripts)
-        if select_transcripts == '["all"]':
-            select_transcripts = "all"
-        if select_transcripts == '["raw"]':
-            select_transcripts = "raw"
-        if select_transcripts == '["mane_select"]':
-            select_transcripts = "mane_select"
-        if select_transcripts == '["mane"]':
-            select_transcripts = "mane"
-        if select_transcripts == '["select"]':
-            select_transcripts = "select"
+            variant_description = input_formatting.format_input(variant_description)
+            select_transcripts = input_formatting.format_input(select_transcripts)
+            if select_transcripts == '["all"]':
+                select_transcripts = "all"
+            if select_transcripts == '["raw"]':
+                select_transcripts = "raw"
+            if select_transcripts == '["mane_select"]':
+                select_transcripts = "mane_select"
+            if select_transcripts == '["mane"]':
+                select_transcripts = "mane"
+            if select_transcripts == '["select"]':
+                select_transcripts = "select"
 
-        try:
-            validate = vval.validate(variant_description, genome_build, select_transcripts,
-                                     transcript_set=transcript_model, lovd_syntax_check=True)
-            content = validate.format_as_dict(with_meta=True)
-        except Exception as e:
-            return {"error": str(e)}, 500
-        finally:
-            vval_object_pool.return_object(vval)
+            try:
+                validate = vval.validate(variant_description, genome_build, select_transcripts,
+                                         transcript_set=transcript_model, lovd_syntax_check=True)
+                content = validate.format_as_dict(with_meta=True)
+            except Exception as e:
+                return {"error": str(e)}, 500
 
         args = parser.parse_args()
 
@@ -158,42 +156,42 @@ class VariantValidatorEnsemblClass(Resource):
     @limiter.limit(vval_rate)  # <- dynamic limiter
     def get(self, genome_build, variant_description, select_transcripts, user_id=None):
 
-        vval = vval_object_pool.get_object()
-        transcript_model = "ensembl"
+        # Get object from vval pool
+        with vval_object_pool.item() as vval:
 
-        if ("all" in select_transcripts or "raw" in select_transcripts) and "auth" not in select_transcripts:
-            if not any(x in variant_description for x in ("c.", "n.", "r.", "p.")):
-                return {"Not Found": "Setting select_transcripts to 'all' or 'raw' is deprecated for genomic "
-                                     "variant processing using this endpoint. Contact admin on "
-                                     "https://variantvalidator.org/help/contact/ for updated instructions and"
-                                     " fair usage information; use another option; or use the LOVD endpoint which is "
-                                     "designed for integration into pipelines"}, 404
-        elif "auth_all" in select_transcripts:
-            select_transcripts = "all"
-        elif "auth_raw" in select_transcripts:
-            select_transcripts = "raw"
+            transcript_model = "ensembl"
 
-        variant_description = input_formatting.format_input(variant_description)
-        select_transcripts = input_formatting.format_input(select_transcripts)
-        if select_transcripts == '["all"]':
-            select_transcripts = "all"
-        if select_transcripts == '["raw"]':
-            select_transcripts = "raw"
-        if select_transcripts == '["mane_select"]':
-            select_transcripts = "mane_select"
-        if select_transcripts == '["mane"]':
-            select_transcripts = "mane"
-        if select_transcripts == '["select"]':
-            select_transcripts = "select"
+            if ("all" in select_transcripts or "raw" in select_transcripts) and "auth" not in select_transcripts:
+                if not any(x in variant_description for x in ("c.", "n.", "r.", "p.")):
+                    return {"Not Found": "Setting select_transcripts to 'all' or 'raw' is deprecated for genomic "
+                                         "variant processing using this endpoint. Contact admin on "
+                                         "https://variantvalidator.org/help/contact/ for updated instructions and"
+                                         " fair usage information; use another option; or use the LOVD endpoint which is "
+                                         "designed for integration into pipelines"}, 404
+            elif "auth_all" in select_transcripts:
+                select_transcripts = "all"
+            elif "auth_raw" in select_transcripts:
+                select_transcripts = "raw"
 
-        try:
-            validate = vval.validate(variant_description, genome_build, select_transcripts,
-                                     transcript_set=transcript_model, lovd_syntax_check=True)
-            content = validate.format_as_dict(with_meta=True)
-        except Exception as e:
-            return {"error": str(e)}, 500
-        finally:
-            vval_object_pool.return_object(vval)
+            variant_description = input_formatting.format_input(variant_description)
+            select_transcripts = input_formatting.format_input(select_transcripts)
+            if select_transcripts == '["all"]':
+                select_transcripts = "all"
+            if select_transcripts == '["raw"]':
+                select_transcripts = "raw"
+            if select_transcripts == '["mane_select"]':
+                select_transcripts = "mane_select"
+            if select_transcripts == '["mane"]':
+                select_transcripts = "mane"
+            if select_transcripts == '["select"]':
+                select_transcripts = "select"
+
+            try:
+                validate = vval.validate(variant_description, genome_build, select_transcripts,
+                                         transcript_set=transcript_model, lovd_syntax_check=True)
+                content = validate.format_as_dict(with_meta=True)
+            except Exception as e:
+                return {"error": str(e)}, 500
 
         args = parser.parse_args()
         if args['content-type'] == 'application/json':
@@ -220,15 +218,15 @@ class Gene2transcriptsClass(Resource):
     @limiter.limit(g2t_rate)  # <- dynamic limiter
     def get(self, gene_query, user_id=None):
 
-        vval = g2t_object_pool.get_object()
-        gene_query = input_formatting.format_input(gene_query)
-        try:
-            content = vval.gene2transcripts(gene_query, lovd_syntax_check=True)[0]
-        except ConnectionError:
-            g2t_object_pool.return_object(vval)
-            raise exceptions.RemoteConnectionError("Cannot connect to rest.genenames.org, please try again later")
-        finally:
-            g2t_object_pool.return_object(vval)
+        # Get object from pool
+        with g2t_object_pool.item() as vval:
+
+            gene_query = input_formatting.format_input(gene_query)
+
+            try:
+                content = vval.gene2transcripts(gene_query, lovd_syntax_check=True)[0]
+            except ConnectionError:
+                raise exceptions.RemoteConnectionError("Cannot connect to rest.genenames.org, please try again later")
 
         args = parser.parse_args()
         if args['content-type'] == 'application/json':
@@ -271,29 +269,29 @@ class Gene2transcriptsV2Class(Resource):
     @limiter.limit(g2t_rate)  # <- dynamic limiter
     def get(self, gene_query, limit_transcripts, transcript_set, genome_build, user_id=None):
 
-        vval = g2t_object_pool.get_object()
-        args = parser_g2t.parse_args()
-        bypass_genomic_spans = not args.get('show_exon_info', True)
+        # Get object from pool
+        with g2t_object_pool.item() as vval:
 
-        gene_query = input_formatting.format_input(gene_query)
-        limit_transcripts = input_formatting.format_input(limit_transcripts)
-        if len(limit_transcripts) == 1:
-            limit_transcripts = limit_transcripts[0]
+            # Collect Arguments
+            args = parser_g2t.parse_args()
+            bypass_genomic_spans = not args.get('show_exon_info', True)
 
-        try:
-            if genome_build not in ["GRCh37", "GRCh38"]:
-                genome_build = None
-            if limit_transcripts in ["False", "false", False]:
-                limit_transcripts = None
-            content = vval.gene2transcripts(gene_query, select_transcripts=limit_transcripts,
-                                            transcript_set=transcript_set, genome_build=genome_build,
-                                            batch_output=True, validator=vval,
-                                            bypass_genomic_spans=bypass_genomic_spans, lovd_syntax_check=True)
-        except ConnectionError:
-            g2t_object_pool.return_object(vval)
-            raise exceptions.RemoteConnectionError("Cannot connect to rest.genenames.org, please try again later")
-        finally:
-            g2t_object_pool.return_object(vval)
+            gene_query = input_formatting.format_input(gene_query)
+            limit_transcripts = input_formatting.format_input(limit_transcripts)
+            if len(limit_transcripts) == 1:
+                limit_transcripts = limit_transcripts[0]
+
+            try:
+                if genome_build not in ["GRCh37", "GRCh38"]:
+                    genome_build = None
+                if limit_transcripts in ["False", "false", False]:
+                    limit_transcripts = None
+                content = vval.gene2transcripts(gene_query, select_transcripts=limit_transcripts,
+                                                transcript_set=transcript_set, genome_build=genome_build,
+                                                batch_output=True, validator=vval,
+                                                bypass_genomic_spans=bypass_genomic_spans, lovd_syntax_check=True)
+            except ConnectionError:
+                raise exceptions.RemoteConnectionError("Cannot connect to rest.genenames.org, please try again later")
 
         if args['content-type'] == 'application/json':
             return representations.application_json(content, 200, None)
@@ -315,13 +313,13 @@ class Hgvs2referenceClass(Resource):
     @limiter.limit(vval_rate)  # <- dynamic limiter
     def get(self, hgvs_description, user_id=None):
 
-        vval = vval_object_pool.get_object()
-        try:
-            content = vval.hgvs2ref(hgvs_description)
-        except Exception as e:
-            return {"error": str(e)}, 500
-        finally:
-            vval_object_pool.return_object(vval)
+        # Get object from pool
+        with vval_object_pool.item() as vval:
+
+            try:
+                content = vval.hgvs2ref(hgvs_description)
+            except Exception as e:
+                return {"error": str(e)}, 500
 
         args = parser.parse_args()
         if args['content-type'] == 'application/json':

@@ -98,9 +98,8 @@ class LOVDClass(Resource):
         # 'primary' passes through unchanged
 
         # Get formatter instance from pool
-        simple_formatter = simple_variant_formatter_pool.get()
+        with simple_variant_formatter_pool.item() as simple_formatter:
 
-        try:
             # Convert multi-value inputs
             variant_description = input_formatting.format_input(variant_description)
             select_transcripts = input_formatting.format_input(select_transcripts)
@@ -117,21 +116,18 @@ class LOVDClass(Resource):
             if select_transcripts == '["select"]':
                 select_transcripts = "select"
 
-            # Format via pool object
-            content = simple_formatter.format(
-                variant_description,
-                genome_build,
-                transcript_model,
-                select_transcripts,
-                checkonly,
-                liftover
-            )
-
-        except Exception as e:
-            return {"error": str(e)}, 500
-
-        finally:
-            simple_variant_formatter_pool.return_object(simple_formatter)
+            try:
+                # Format via pool object
+                content = simple_formatter.format(
+                    variant_description,
+                    genome_build,
+                    transcript_model,
+                    select_transcripts,
+                    checkonly,
+                    liftover
+                )
+            except Exception as e:
+                return {"error": str(e)}, 500
 
         # Convert ordered dict → plain dict
         to_dict = ordereddict_to_dict(content)

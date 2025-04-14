@@ -69,9 +69,8 @@ class VariantFormatterClass(Resource):
             checkonly = True
 
         # Get formatter instance from pool
-        simple_formatter = simple_variant_formatter_pool.get()
+        with simple_variant_formatter_pool.item() as simple_formatter:
 
-        try:
             # Convert inputs to JSON arrays
             variant_description = input_formatting.format_input(variant_description)
             select_transcripts = input_formatting.format_input(select_transcripts)
@@ -88,21 +87,17 @@ class VariantFormatterClass(Resource):
             if select_transcripts == '["select"]':
                 select_transcripts = "select"
 
-            # Run formatter
-            content = simple_formatter.format(
-                variant_description,
-                genome_build,
-                transcript_model,
-                select_transcripts,
-                checkonly
-            )
-
-        except Exception as e:
-            return {"error": str(e)}, 500
-
-        finally:
-            # Always return formatter to pool
-            simple_variant_formatter_pool.return_object(simple_formatter)
+            try:
+                # Run formatter
+                content = simple_formatter.format(
+                    variant_description,
+                    genome_build,
+                    transcript_model,
+                    select_transcripts,
+                    checkonly
+                )
+            except Exception as e:
+                return {"error": str(e)}, 500
 
         # Parse query arguments
         args = parser.parse_args()
