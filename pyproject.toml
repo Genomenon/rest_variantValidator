@@ -53,7 +53,8 @@ dependencies = [
     # Dependencies pinned to the final supported releases
     "vvhgvs@git+https://github.com/openvar/vv_hgvs@4.0.0",
     "VariantFormatter@git+https://github.com/openvar/variantFormatter@4.0.0",
-    "VariantValidator@git+https://github.com/openvar/variantValidator@4.0.0"
+    # XXX use Genomenon's VariantValidator fork
+    "VariantValidator@git+https://github.com/Genomenon/variantValidator@cv-work"
 ]
 
 # URLs related to the project
