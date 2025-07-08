@@ -91,7 +91,7 @@ class VariantValidatorClass(Resource):
             try:
                 # Validate using the VariantValidator Python Library
                 validate = vval.validate(variant_description, genome_build, select_transcripts,
-                                         transcript_set=transcript_model, lovd_syntax_check=True)
+                                         transcript_set=transcript_model, lovd_syntax_check=False)
                 content = validate.format_as_dict(with_meta=True)
             except Exception as e:
                 # Handle the exception and customize the error response
