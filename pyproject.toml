@@ -52,7 +52,7 @@ dependencies = [
     # Dependencies from other repositories, specified with their repository URLs and package names
     "vvhgvs@git+https://github.com/openvar/vv_hgvs@master",
     "VariantFormatter@git+https://github.com/openvar/variantFormatter@master",
-    "VariantValidator@git+https://github.com/openvar/variantValidator@master"
+    "VariantValidator@git+https://github.com/Genomenon/variantValidator@cv-work"
 ]
 
 # URLs related to the project
