@@ -2,7 +2,7 @@
 from flask import Flask, request
 from rest_VariantValidator.endpoints import api
 from flask_cors import CORS
-from rest_VariantValidator.utils import exceptions, request_parser, representations
+from rest_VariantValidator.utils import exceptions, object_pool, request_parser, representations
 from logging import handlers
 import time
 import os
@@ -43,6 +43,17 @@ if config['logging'].getboolean('log') is True:
     log_file_level = logging.getLevelName(file_level)
     logHandler.setLevel(log_file_level)
     logger.addHandler(logHandler)
+
+# Set initial object pool sizes based on configuration settings, e.g.
+#
+# [rest]
+# vval_pool_size = 8
+for pool, pool_name, default in [
+    (object_pool.vval_object_pool, 'vval', 8),
+    (object_pool.g2t_object_pool, 'g2t', 6),
+    (object_pool.simple_variant_formatter_pool, 'simple_variant_formatter', 8),
+]:
+    pool.ensure(config.getint('rest', f'{pool_name}_pool_size', fallback=default))
 
 """
 Create a parser object locally
