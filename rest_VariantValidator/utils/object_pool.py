@@ -65,9 +65,10 @@ class ObjectPool:
 
 
 # Create shared object pools
-vval_object_pool = ObjectPool(Validator, initial_pool_size=12, max_pool_size=12)
-g2t_object_pool = ObjectPool(Validator, initial_pool_size=6, max_pool_size=10)
-simple_variant_formatter_pool = ObjectPool(lambda: simpleVariantFormatter, initial_pool_size=8, max_pool_size=10)
+# Pools will be pre-filled to configurable sizes in app.py.
+vval_object_pool = ObjectPool(Validator, initial_pool_size=0, max_pool_size=10)
+g2t_object_pool = ObjectPool(Validator, initial_pool_size=0, max_pool_size=10)
+simple_variant_formatter_pool = ObjectPool(lambda: simpleVariantFormatter, initial_pool_size=0, max_pool_size=10)
 
 # <LICENSE>
 # Copyright (C) 2016-2026 VariantValidator Contributors
