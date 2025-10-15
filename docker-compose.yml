@@ -42,7 +42,7 @@ services:
     ports:
       - "5001:5000"
       - "5050:5050"
-      - "8000:8000"
+      #- "8000:8000"
       - "9000:9000"
     expose:
       - "5001"  # Expose ports for external access
