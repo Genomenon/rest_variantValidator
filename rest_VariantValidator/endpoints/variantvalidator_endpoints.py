@@ -104,7 +104,7 @@ class VariantValidatorClass(Resource):
         try:
             # Validate using the VariantValidator Python Library
             validate = vval.validate(variant_description, genome_build, select_transcripts,
-                                     transcript_set=transcript_model, lovd_syntax_check=True)
+                                     transcript_set=transcript_model, lovd_syntax_check=True, shorthand_vcf=False)
             content = validate.format_as_dict(with_meta=True)
         except Exception as e:
             return {"error": str(e)}, 500
@@ -198,7 +198,7 @@ class VariantValidatorEnsemblClass(Resource):
 
         try:
             validate = vval.validate(variant_description, genome_build, select_transcripts,
-                                     transcript_set=transcript_model, lovd_syntax_check=True)
+                                     transcript_set=transcript_model, lovd_syntax_check=True, shorthand_vcf=False)
             content = validate.format_as_dict(with_meta=True)
         except Exception as e:
             return {"error": str(e)}, 500
