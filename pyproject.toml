@@ -35,7 +35,7 @@ classifiers = [
 
 # List of project dependencies
 dependencies = [
-    # Dependencies that will be installed via PyPi
+    # Dependencies that will be installed via PyPI
     "httplib2",
     "configparser",
     "dicttoxml",
@@ -50,10 +50,10 @@ dependencies = [
     "flask_limiter",
     "psutil",
 
-    # Dependencies from other repositories, specified with their repository URLs and package names
-    "vvhgvs@git+https://github.com/openvar/vv_hgvs@master",
-    "VariantFormatter@git+https://github.com/openvar/variantFormatter@master",
-    "VariantValidator@git+https://github.com/openvar/variantValidator@master"
+    # Dependencies pinned to the final supported releases
+    "vvhgvs@git+https://github.com/openvar/vv_hgvs@4.0.0",
+    "VariantFormatter@git+https://github.com/openvar/variantFormatter@4.0.0",
+    "VariantValidator@git+https://github.com/openvar/variantValidator@4.0.0"
 ]
 
 # URLs related to the project
