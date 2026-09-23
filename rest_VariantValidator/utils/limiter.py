@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Read rate limiting configuration
 # -----------------------------------------------------------------------------
 config = ConfigParser()
-config.read(vv_settings.CONFIG_DIR)
+config.read(vv_settings.get_config_dir())
 
 RATE_LIMITING_ENABLED = config.getboolean(
     "rate_limiting",

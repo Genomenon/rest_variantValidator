@@ -30,9 +30,10 @@ if __name__ == '__main__':
 
     settings = read_settings()
     newfile = False
+    config_dir = settings['get_config_dir']()
 
-    if os.path.exists(settings['CONFIG_DIR']):
-        readfile = settings['CONFIG_DIR']
+    if os.path.exists(config_dir):
+        readfile = config_dir
     else:
         root = find_root()
         readfile = os.path.join(root, 'configuration', 'default.ini')
@@ -55,7 +56,7 @@ if __name__ == '__main__':
                 values_changed = True
 
     if newfile or values_changed:
-        with open(settings['CONFIG_DIR'], 'w') as fh:
+        with open(config_dir, 'w') as fh:
             config.write(fh)
 
 # <LICENSE>
