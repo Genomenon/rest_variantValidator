@@ -19,7 +19,7 @@ keywords = [
     "HGVS",
     "sequencevariants"
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -51,10 +51,10 @@ dependencies = [
     "psutil",
 
     # Dependencies pinned to the final supported releases
-    "vvhgvs@git+https://github.com/openvar/vv_hgvs@4.0.0",
-    "VariantFormatter@git+https://github.com/openvar/variantFormatter@4.0.0",
+    "vvhgvs@git+https://github.com/openvar/vv_hgvs@master",
+    "VariantFormatter@git+https://github.com/openvar/variantFormatter@master",
     # XXX use Genomenon's VariantValidator fork
-    "VariantValidator@git+https://github.com/Genomenon/variantValidator@cv-work"
+    "VariantValidator@git+https://github.com/Genomenon/variantValidator@cv-work-rebased"
 ]
 
 # URLs related to the project
