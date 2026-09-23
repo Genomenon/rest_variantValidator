@@ -112,6 +112,14 @@ def _mysql_max_connections_from_config():
 # CAPACITY COMPUTATION (RAM + MYSQL, WEIGHTED)
 # =============================================================================
 
+# Gunicorn is configured with `sync` workers: each worker process handles one
+# request at a time, so it never has more than one object of a given pool
+# checked out concurrently. A cap of 2 (one in use, one spare for turnover
+# between requests) avoids holding RAM/DB connections that a sync worker can
+# never use concurrently. Revisit this if the worker class ever changes to
+# something threaded/async that can use a bigger per-worker pool.
+SYNC_WORKER_POOL_CAP = 2
+
 def compute_pool_sizes():
     total_ram = _total_ram_mb()
     usable_ram = int(total_ram * 0.45)  # policy
@@ -143,6 +151,12 @@ def compute_pool_sizes():
         vval_size = max(1, int(vval_size * scale))
         vf_size   = max(1, int(vf_size * scale))
         g2t_size  = max(1, mysql_limit - vval_size - vf_size)
+
+    # Sync workers never use more than one pooled object at a time; don't
+    # size beyond what one worker process can actually use concurrently.
+    vval_size = min(vval_size, SYNC_WORKER_POOL_CAP)
+    vf_size   = min(vf_size, SYNC_WORKER_POOL_CAP)
+    g2t_size  = min(g2t_size, SYNC_WORKER_POOL_CAP)
 
     logger.warning(
         "Capacity scan:"
